@@ -1,0 +1,111 @@
+import 'package:camera/camera.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:untitled1/layout/cubit/states.dart';
+import 'package:untitled1/moduls/home/home_screen.dart';
+import 'package:untitled1/moduls/inquiry/inquiry_screen.dart';
+import 'package:untitled1/moduls/involved/involved_screen.dart';
+import 'package:untitled1/moduls/user/user_screen.dart';
+import 'package:youtube_player_flutter/youtube_player_flutter.dart';
+
+class MainCubit extends Cubit<MainStates> {
+  MainCubit() : super(MainInitialStates());
+
+  static MainCubit get(context) => BlocProvider.of(context);
+
+  int currentIndex = 0;
+
+  List<Widget> screens = [
+    HomeScreen(),
+    const InvolvedScreen(),
+    const InquiryScreen(),
+    const UserScreen(),
+  ];
+
+  void changeIndex(int index) {
+    currentIndex = index;
+    emit(MainChangeBottomNavStates());
+  }
+
+  final Map<String, bool> isShowPassword = {
+    'login': true,
+    'signUp': true,
+    'newPassword': true,
+    'confirmPassword': true,
+  };
+
+  void changePasswordVisibility(String key) {
+    isShowPassword[key] = !isShowPassword[key]!;
+    emit(MainChangePasswordVisibilityStates());
+  }
+
+  // YouTube Player
+  late YoutubePlayerController youtubeController1;
+  late YoutubePlayerController youtubeController2;
+  late YoutubePlayerController youtubeController3;
+
+  void initYoutubeController() {
+    youtubeController1 = YoutubePlayerController(
+      initialVideoId: 'L8Ue7NspO70',
+      flags: const YoutubePlayerFlags(
+        autoPlay: false,
+      ),
+    );
+    youtubeController2 = YoutubePlayerController(
+      initialVideoId: 'vr73xuMlSxU',
+      flags: const YoutubePlayerFlags(
+        autoPlay: false,
+      ),
+    );
+    youtubeController3 = YoutubePlayerController(
+      initialVideoId: '4QpQkVPdubc',
+      flags: const YoutubePlayerFlags(
+        autoPlay: false,
+      ),
+    );
+  }
+
+  @override
+  Future<void> close() {
+    youtubeController1.dispose();
+    youtubeController2.dispose();
+    youtubeController3.dispose();
+    return super.close();
+  }
+
+  //camera
+  CameraController? cameraController;
+  List<CameraDescription>? cameras;
+  XFile? capturedImage;
+
+  Future<void> initializeCamera() async {
+    try {
+      cameras = await availableCameras();
+      if (cameras!.isNotEmpty) {
+        cameraController = CameraController(cameras![0], ResolutionPreset.max);
+        await cameraController!.initialize();
+        emit(MainCameraInitializedState());
+      }
+    } catch (e) {
+      emit(MainCameraErrorState(e.toString()));
+    }
+  }
+
+  Future<void> captureImage(context) async {
+    if (cameraController != null && cameraController!.value.isInitialized) {
+      try {
+        capturedImage = await cameraController!.takePicture();
+        Navigator.pop(context);
+        emit(MainCameraCaptureState(capturedImage!.path));
+      } catch (e) {
+        emit(MainCameraErrorState(e.toString()));
+      }
+    }
+  }
+
+  void disposeCamera() {
+    cameraController?.dispose();
+    emit(MainCameraDisposedState());
+  }
+
+}
